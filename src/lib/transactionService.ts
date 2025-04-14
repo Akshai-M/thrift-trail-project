@@ -57,7 +57,46 @@ export const getMonthlyExpenseData = () => {
     return acc;
   }, {});
   
-  return Object.entries(monthlyData).map(([month, total]) => ({ month, total }));
+  return Object.entries(monthlyData)
+    .map(([month, total]) => ({ month, total }))
+    .sort((a, b) => {
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return months.indexOf(a.month) - months.indexOf(b.month);
+    });
+};
+
+// Get monthly income and expense data for chart
+export const getMonthlyIncomeExpenseData = () => {
+  const transactions = getTransactions();
+  
+  // Create a map of all months with income and expenses
+  const monthlyData = transactions.reduce((acc: Record<string, { income: number; expenses: number }>, transaction) => {
+    const month = new Date(transaction.date).toLocaleString('default', { month: 'short' });
+    
+    if (!acc[month]) {
+      acc[month] = { income: 0, expenses: 0 };
+    }
+    
+    if (transaction.type === 'income') {
+      acc[month].income += transaction.amount;
+    } else {
+      acc[month].expenses += transaction.amount;
+    }
+    
+    return acc;
+  }, {});
+  
+  // Convert to array and sort by month
+  return Object.entries(monthlyData)
+    .map(([month, data]) => ({ 
+      month, 
+      income: data.income, 
+      expenses: data.expenses 
+    }))
+    .sort((a, b) => {
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return months.indexOf(a.month) - months.indexOf(b.month);
+    });
 };
 
 // Get total expenses

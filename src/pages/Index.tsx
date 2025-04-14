@@ -1,11 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import Header from '@/components/Header';
 import TransactionForm from '@/components/TransactionForm';
-import TransactionList from '@/components/TransactionList';
+import TabsView from '@/components/TabsView';
 import DashboardCard from '@/components/DashboardCard';
-import ExpenseChart from '@/components/ExpenseChart';
 import { Transaction, TransactionFormData } from '@/lib/types';
 import {
   getTransactions,
@@ -33,7 +31,6 @@ const Index = () => {
   const [totalIncome, setTotalIncome] = useState<number>(0);
   const [balance, setBalance] = useState<number>(0);
 
-  // Load transactions and calculate totals
   useEffect(() => {
     const loadedTransactions = getTransactions();
     setTransactions(loadedTransactions);
@@ -46,12 +43,10 @@ const Index = () => {
     setBalance(income - expenses);
   }, []);
 
-  // Handle adding a new transaction
   const handleAddTransaction = (data: TransactionFormData) => {
     const newTransaction = addTransaction(data);
     setTransactions([newTransaction, ...transactions]);
     
-    // Update totals
     if (data.type === 'expense') {
       setTotalExpenses(prev => prev + data.amount);
       setBalance(prev => prev - data.amount);
@@ -61,7 +56,6 @@ const Index = () => {
     }
   };
 
-  // Handle updating a transaction
   const handleUpdateTransaction = (data: TransactionFormData) => {
     if (!currentTransaction) return;
     
@@ -73,12 +67,10 @@ const Index = () => {
     
     updateTransaction(updatedTransaction);
     
-    // Update transactions list
     setTransactions(transactions.map(t => 
       t.id === updatedTransaction.id ? updatedTransaction : t
     ));
     
-    // Update totals
     if (oldTransaction.type === 'expense') {
       setTotalExpenses(prev => prev - oldTransaction.amount);
       if (data.type === 'expense') {
@@ -95,29 +87,24 @@ const Index = () => {
       }
     }
     
-    // Update balance
     setBalance(totalIncome - totalExpenses +
       (oldTransaction.type === 'expense' ? oldTransaction.amount : -oldTransaction.amount) +
       (data.type === 'expense' ? -data.amount : data.amount));
   };
 
-  // Handle transaction edit button click
   const handleEditTransaction = (transaction: Transaction) => {
     setCurrentTransaction(transaction);
     setIsFormOpen(true);
   };
 
-  // Handle transaction deletion
   const handleDeleteTransaction = (id: string) => {
     const transactionToDelete = transactions.find(t => t.id === id);
     if (!transactionToDelete) return;
     
     deleteTransaction(id);
     
-    // Update transactions list
     setTransactions(transactions.filter(t => t.id !== id));
     
-    // Update totals
     if (transactionToDelete.type === 'expense') {
       setTotalExpenses(prev => prev - transactionToDelete.amount);
       setBalance(prev => prev + transactionToDelete.amount);
@@ -132,19 +119,18 @@ const Index = () => {
     });
   };
 
-  // Open form for new transaction
   const handleAddNew = () => {
     setCurrentTransaction(undefined);
     setIsFormOpen(true);
   };
 
-  // Handle form save
   const handleSaveTransaction = (data: TransactionFormData) => {
     if (currentTransaction) {
       handleUpdateTransaction(data);
     } else {
       handleAddTransaction(data);
     }
+    setIsFormOpen(false);
   };
 
   return (
@@ -187,16 +173,12 @@ const Index = () => {
           />
         </div>
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <ExpenseChart />
-          
-          <TransactionList 
-            transactions={transactions}
-            onAddTransaction={handleAddNew}
-            onEditTransaction={handleEditTransaction}
-            onDeleteTransaction={handleDeleteTransaction}
-          />
-        </div>
+        <TabsView
+          transactions={transactions}
+          onAddTransaction={handleAddNew}
+          onEditTransaction={handleEditTransaction}
+          onDeleteTransaction={handleDeleteTransaction}
+        />
       </main>
       
       <TransactionForm 
