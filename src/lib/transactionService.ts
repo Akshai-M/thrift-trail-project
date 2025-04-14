@@ -1,4 +1,4 @@
-
+import { ObjectId } from 'mongodb';
 import { Transaction, TransactionFormData } from './types';
 import { getCollection } from './db';
 
@@ -6,16 +6,17 @@ const COLLECTION_NAME = 'transactions';
 
 // Helper to generate a unique ID
 const generateId = (): string => {
-  return Math.random().toString(36).substring(2) + Date.now().toString(36);
+  return new ObjectId().toString();
 };
 
-// Get all transactions from storage
+// Get all transactions from MongoDB
 export const getTransactions = async (): Promise<Transaction[]> => {
   try {
     const collection = await getCollection(COLLECTION_NAME);
-    const transactions = await collection.find({}).toArray();
+    const transactions = await (await collection.find({})).toArray();
+    
     return transactions.map(transaction => ({
-      id: transaction._id,
+      id: transaction._id.toString(),
       amount: transaction.amount,
       date: transaction.date,
       description: transaction.description,
@@ -32,20 +33,24 @@ export const addTransaction = async (transaction: TransactionFormData): Promise<
   try {
     const collection = await getCollection(COLLECTION_NAME);
     const id = generateId();
-    const newTransaction: Transaction = {
-      ...transaction,
-      id
-    };
     
-    await collection.insertOne({
-      _id: id,
+    const newTransaction = {
+      _id: new ObjectId(id),
       amount: transaction.amount,
       date: transaction.date,
       description: transaction.description,
       type: transaction.type
-    });
+    };
     
-    return newTransaction;
+    await collection.insertOne(newTransaction);
+    
+    return {
+      id,
+      amount: transaction.amount,
+      date: transaction.date,
+      description: transaction.description,
+      type: transaction.type
+    };
   } catch (error) {
     console.error("Error adding transaction:", error);
     throw error;
@@ -59,7 +64,7 @@ export const updateTransaction = async (transaction: Transaction): Promise<Trans
     const { id, ...transactionData } = transaction;
     
     await collection.updateOne(
-      { _id: id },
+      { _id: new ObjectId(id) },
       { $set: transactionData }
     );
     
@@ -74,7 +79,7 @@ export const updateTransaction = async (transaction: Transaction): Promise<Trans
 export const deleteTransaction = async (id: string): Promise<void> => {
   try {
     const collection = await getCollection(COLLECTION_NAME);
-    await collection.deleteOne({ _id: id });
+    await collection.deleteOne({ _id: new ObjectId(id) });
   } catch (error) {
     console.error("Error deleting transaction:", error);
     throw error;
