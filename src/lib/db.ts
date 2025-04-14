@@ -1,45 +1,19 @@
 
-import { MongoClient, Db } from 'mongodb';
+import { getCollection } from './browserStorage';
 
-let client: MongoClient | null = null;
-let db: Db | null = null;
+// This file is now a simple passthrough to browserStorage
+// to maintain API compatibility with the original code
 
-// Initialize MongoDB connection
-export const connectToDatabase = async (): Promise<Db> => {
-  if (db) return db;
-  
-  try {
-    const uri = import.meta.env.VITE_MONGO_URI;
-    
-    if (!uri) {
-      throw new Error('MongoDB URI not found in environment variables');
-    }
-    
-    client = new MongoClient(uri);
-    await client.connect();
-    
-    db = client.db();
-    console.log('Connected to MongoDB');
-    return db;
-  } catch (error) {
-    console.error('Failed to connect to MongoDB:', error);
-    throw error;
-  }
-};
+export { getCollection };
 
-// Get a collection from MongoDB
-export async function getCollection(collectionName: string) {
-  const db = await connectToDatabase();
-  return db.collection(collectionName);
-}
-
-// Close MongoDB connection when app is closed
+// No-op function for connection closing
 export const closeConnection = async () => {
-  if (client) {
-    await client.close();
-    client = null;
-    db = null;
-    console.log('MongoDB connection closed');
-  }
+  // Nothing to close in localStorage implementation
+  console.log('Browser storage adapter: no connection to close');
 };
 
+// No-op function for connection initialization
+export const connectToDatabase = async () => {
+  console.log('Using browser storage adapter instead of MongoDB');
+  return null;
+};

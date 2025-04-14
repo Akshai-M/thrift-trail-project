@@ -1,19 +1,32 @@
-import { ObjectId } from 'mongodb';
+
 import { Transaction, TransactionFormData } from './types';
-import { getCollection } from './db';
+import { getCollection, generateObjectId } from './browserStorage';
 
 const COLLECTION_NAME = 'transactions';
 
 // Helper to generate a unique ID
 const generateId = (): string => {
-  return new ObjectId().toString();
+  return generateObjectId();
 };
 
-// Get all transactions from MongoDB
+// Simulates MongoDB ObjectId for browser storage
+class BrowserObjectId {
+  private id: string;
+  
+  constructor(id?: string) {
+    this.id = id || generateObjectId();
+  }
+  
+  toString(): string {
+    return this.id;
+  }
+}
+
+// Get all transactions from storage
 export const getTransactions = async (): Promise<Transaction[]> => {
   try {
     const collection = await getCollection(COLLECTION_NAME);
-    const transactions = await (await collection.find({})).toArray();
+    const transactions = await collection.toArray();
     
     return transactions.map(transaction => ({
       id: transaction._id.toString(),
@@ -35,7 +48,7 @@ export const addTransaction = async (transaction: TransactionFormData): Promise<
     const id = generateId();
     
     const newTransaction = {
-      _id: new ObjectId(id),
+      _id: new BrowserObjectId(id),
       amount: transaction.amount,
       date: transaction.date,
       description: transaction.description,
@@ -64,7 +77,7 @@ export const updateTransaction = async (transaction: Transaction): Promise<Trans
     const { id, ...transactionData } = transaction;
     
     await collection.updateOne(
-      { _id: new ObjectId(id) },
+      { _id: new BrowserObjectId(id) },
       { $set: transactionData }
     );
     
@@ -79,7 +92,7 @@ export const updateTransaction = async (transaction: Transaction): Promise<Trans
 export const deleteTransaction = async (id: string): Promise<void> => {
   try {
     const collection = await getCollection(COLLECTION_NAME);
-    await collection.deleteOne({ _id: new ObjectId(id) });
+    await collection.deleteOne({ _id: new BrowserObjectId(id) });
   } catch (error) {
     console.error("Error deleting transaction:", error);
     throw error;
