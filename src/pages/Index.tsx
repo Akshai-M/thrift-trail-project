@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import Header from '@/components/Header';
@@ -30,66 +31,111 @@ const Index = () => {
   const [totalExpenses, setTotalExpenses] = useState<number>(0);
   const [totalIncome, setTotalIncome] = useState<number>(0);
   const [balance, setBalance] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    const loadedTransactions = getTransactions();
-    setTransactions(loadedTransactions);
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        const loadedTransactions = await getTransactions();
+        setTransactions(loadedTransactions);
+        
+        const expenses = await getTotalExpenses();
+        const income = await getTotalIncome();
+        
+        setTotalExpenses(expenses);
+        setTotalIncome(income);
+        setBalance(income - expenses);
+      } catch (error) {
+        console.error("Error loading data:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load transaction data. Please try again.",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
     
-    const expenses = getTotalExpenses();
-    const income = getTotalIncome();
-    
-    setTotalExpenses(expenses);
-    setTotalIncome(income);
-    setBalance(income - expenses);
-  }, []);
+    fetchData();
+  }, [toast]);
 
-  const handleAddTransaction = (data: TransactionFormData) => {
-    const newTransaction = addTransaction(data);
-    setTransactions([newTransaction, ...transactions]);
-    
-    if (data.type === 'expense') {
-      setTotalExpenses(prev => prev + data.amount);
-      setBalance(prev => prev - data.amount);
-    } else {
-      setTotalIncome(prev => prev + data.amount);
-      setBalance(prev => prev + data.amount);
+  const handleAddTransaction = async (data: TransactionFormData) => {
+    try {
+      const newTransaction = await addTransaction(data);
+      setTransactions([newTransaction, ...transactions]);
+      
+      if (data.type === 'expense') {
+        setTotalExpenses(prev => prev + data.amount);
+        setBalance(prev => prev - data.amount);
+      } else {
+        setTotalIncome(prev => prev + data.amount);
+        setBalance(prev => prev + data.amount);
+      }
+      
+      toast({
+        title: "Transaction added",
+        description: `${data.description} - $${data.amount.toFixed(2)}`
+      });
+    } catch (error) {
+      console.error("Error adding transaction:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add transaction. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
-  const handleUpdateTransaction = (data: TransactionFormData) => {
+  const handleUpdateTransaction = async (data: TransactionFormData) => {
     if (!currentTransaction) return;
     
-    const oldTransaction = currentTransaction;
-    const updatedTransaction = {
-      ...data,
-      id: oldTransaction.id
-    };
-    
-    updateTransaction(updatedTransaction);
-    
-    setTransactions(transactions.map(t => 
-      t.id === updatedTransaction.id ? updatedTransaction : t
-    ));
-    
-    if (oldTransaction.type === 'expense') {
-      setTotalExpenses(prev => prev - oldTransaction.amount);
-      if (data.type === 'expense') {
-        setTotalExpenses(prev => prev + data.amount);
+    try {
+      const oldTransaction = currentTransaction;
+      const updatedTransaction = {
+        ...data,
+        id: oldTransaction.id
+      };
+      
+      await updateTransaction(updatedTransaction);
+      
+      setTransactions(transactions.map(t => 
+        t.id === updatedTransaction.id ? updatedTransaction : t
+      ));
+      
+      if (oldTransaction.type === 'expense') {
+        setTotalExpenses(prev => prev - oldTransaction.amount);
+        if (data.type === 'expense') {
+          setTotalExpenses(prev => prev + data.amount);
+        } else {
+          setTotalIncome(prev => prev + data.amount);
+        }
       } else {
-        setTotalIncome(prev => prev + data.amount);
+        setTotalIncome(prev => prev - oldTransaction.amount);
+        if (data.type === 'expense') {
+          setTotalExpenses(prev => prev + data.amount);
+        } else {
+          setTotalIncome(prev => prev + data.amount);
+        }
       }
-    } else {
-      setTotalIncome(prev => prev - oldTransaction.amount);
-      if (data.type === 'expense') {
-        setTotalExpenses(prev => prev + data.amount);
-      } else {
-        setTotalIncome(prev => prev + data.amount);
-      }
+      
+      setBalance(totalIncome - totalExpenses +
+        (oldTransaction.type === 'expense' ? oldTransaction.amount : -oldTransaction.amount) +
+        (data.type === 'expense' ? -data.amount : data.amount));
+      
+      toast({
+        title: "Transaction updated",
+        description: `${data.description} - $${data.amount.toFixed(2)}`
+      });
+    } catch (error) {
+      console.error("Error updating transaction:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update transaction. Please try again.",
+        variant: "destructive"
+      });
     }
-    
-    setBalance(totalIncome - totalExpenses +
-      (oldTransaction.type === 'expense' ? oldTransaction.amount : -oldTransaction.amount) +
-      (data.type === 'expense' ? -data.amount : data.amount));
   };
 
   const handleEditTransaction = (transaction: Transaction) => {
@@ -97,26 +143,35 @@ const Index = () => {
     setIsFormOpen(true);
   };
 
-  const handleDeleteTransaction = (id: string) => {
+  const handleDeleteTransaction = async (id: string) => {
     const transactionToDelete = transactions.find(t => t.id === id);
     if (!transactionToDelete) return;
     
-    deleteTransaction(id);
-    
-    setTransactions(transactions.filter(t => t.id !== id));
-    
-    if (transactionToDelete.type === 'expense') {
-      setTotalExpenses(prev => prev - transactionToDelete.amount);
-      setBalance(prev => prev + transactionToDelete.amount);
-    } else {
-      setTotalIncome(prev => prev - transactionToDelete.amount);
-      setBalance(prev => prev - transactionToDelete.amount);
+    try {
+      await deleteTransaction(id);
+      
+      setTransactions(transactions.filter(t => t.id !== id));
+      
+      if (transactionToDelete.type === 'expense') {
+        setTotalExpenses(prev => prev - transactionToDelete.amount);
+        setBalance(prev => prev + transactionToDelete.amount);
+      } else {
+        setTotalIncome(prev => prev - transactionToDelete.amount);
+        setBalance(prev => prev - transactionToDelete.amount);
+      }
+      
+      toast({
+        title: "Transaction deleted",
+        description: `${transactionToDelete.description} has been removed.`,
+      });
+    } catch (error) {
+      console.error("Error deleting transaction:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete transaction. Please try again.",
+        variant: "destructive"
+      });
     }
-    
-    toast({
-      title: "Transaction deleted",
-      description: `${transactionToDelete.description} has been removed.`,
-    });
   };
 
   const handleAddNew = () => {
@@ -173,12 +228,18 @@ const Index = () => {
           />
         </div>
         
-        <TabsView
-          transactions={transactions}
-          onAddTransaction={handleAddNew}
-          onEditTransaction={handleEditTransaction}
-          onDeleteTransaction={handleDeleteTransaction}
-        />
+        {isLoading ? (
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-gray-900"></div>
+          </div>
+        ) : (
+          <TabsView
+            transactions={transactions}
+            onAddTransaction={handleAddNew}
+            onEditTransaction={handleEditTransaction}
+            onDeleteTransaction={handleDeleteTransaction}
+          />
+        )}
       </main>
       
       <TransactionForm 

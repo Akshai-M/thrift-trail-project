@@ -1,11 +1,27 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { getMonthlyExpenseData } from '@/lib/transactionService';
 
 const ExpenseChart: React.FC = () => {
-  const chartData = getMonthlyExpenseData();
+  const [chartData, setChartData] = useState<Array<{ month: string; total: number }>>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const data = await getMonthlyExpenseData();
+        setChartData(data);
+      } catch (error) {
+        console.error("Error fetching expense data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, []);
   
   // If we don't have data, show placeholder
   const hasData = chartData.length > 0;
@@ -29,7 +45,11 @@ const ExpenseChart: React.FC = () => {
         <CardTitle>Monthly Expenses</CardTitle>
       </CardHeader>
       <CardContent className="pt-2">
-        {hasData ? (
+        {isLoading ? (
+          <div className="flex items-center justify-center h-[300px]">
+            <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-gray-900"></div>
+          </div>
+        ) : hasData ? (
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={chartData} margin={{ top: 20, right: 20, left: 20, bottom: 20 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
