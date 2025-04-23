@@ -1,3 +1,5 @@
+
+- **Check out the project [link](https://thrift-trail-project.vercel.app/)**
 ## ⚙️ Features
 
 - Add, edit, and delete transactions (amount, date, description)
